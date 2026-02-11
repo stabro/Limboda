@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  standard
+  firmatecknare
+  styrelsen
+}
+
+model User {
+  id              String             @id @default(cuid())
+  email           String             @unique
+  passwordHash    String
+  name            String
+  role            Role               @default(standard)
+  houseNumber     Int
+  pushEnabled     Boolean            @default(false)
+  sessions        Session[]
+  waterReadings   WaterReading[]
+  news            News[]             @relation("NewsAuthor")
+  newsReads       NewsRead[]
+  pushSubs        PushSubscription[]
+  auditLogs       AuditLog[]
+  createdAt       DateTime           @default(now())
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model WaterReading {
+  id                 String   @id @default(cuid())
+  houseNumber        Int
+  address            String
+  readingDate        DateTime
+  submitDate         DateTime @default(now())
+  meterValue         Float
+  periodConsumption  Float
+  invoiceAmount      Float
+  imagePath          String?
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+}
+
+model Setting {
+  id              Int      @id @default(1)
+  waterCostPerM3  Float    @default(35)
+  waterPeriodCost Float    @default(150)
+  updatedAt       DateTime @updatedAt
+}
+
+model InvoiceFile {
+  id         String   @id @default(cuid())
+  fileName   String
+  filePath   String
+  uploadedBy String
+  createdAt  DateTime @default(now())
+}
+
+model News {
+  id         String    @id @default(cuid())
+  title      String
+  body       String
+  category   String
+  authorId   String
+  author     User      @relation("NewsAuthor", fields: [authorId], references: [id])
+  createdAt  DateTime  @default(now())
+  reads      NewsRead[]
+}
+
+model NewsRead {
+  id         String   @id @default(cuid())
+  newsId     String
+  userId     String
+  readAt     DateTime @default(now())
+  news       News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([newsId, userId])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model BraAttHa {
+  id             String   @id @default(cuid())
+  company        String
+  phone          String
+  contactPerson  String?
+  customerNumber String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  payload    String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+}
